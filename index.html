@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Tech Notes — 技術リファレンス</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #1c232c;
+    --border: #2d333b;
+    --ink: #d7dde4;
+    --ink-dim: #8b949e;
+    --accent: #7ee787;
+    --accent-2: #58a6ff;
+    --warn: #f0883e;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 500px at 100% -10%, rgba(88,166,255,.08), transparent 60%),
+      radial-gradient(700px 400px at -10% 110%, rgba(126,231,135,.06), transparent 60%),
+      var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 15px;
+    line-height: 1.65;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+  header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    background: rgba(13,17,23,.85);
+    backdrop-filter: blur(8px);
+    z-index: 5;
+  }
+  header .logo {
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--accent);
+  }
+  header .logo b { color: var(--ink); }
+  header .status {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  header .status.ok { color: var(--accent); }
+  header .status.err { color: var(--warn); }
+  .gear {
+    cursor: pointer;
+    color: var(--ink-dim);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 9px;
+    user-select: none;
+  }
+  .gear:hover { color: var(--ink); border-color: var(--accent-2); }
+
+  main { flex: 1; width: 100%; max-width: 860px; margin: 0 auto; padding: 18px; }
+
+  /* settings */
+  .settings {
+    display: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .settings.open { display: block; }
+  .settings h2 { margin: 0 0 10px; font-size: 13px; color: var(--ink-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .settings label { display: block; font-size: 12px; color: var(--ink-dim); margin: 10px 0 4px; }
+  .settings input {
+    width: 100%; padding: 9px 11px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--ink);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .settings .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .settings .row > div { flex: 1; min-width: 140px; }
+  .settings .hint { font-size: 11px; color: var(--ink-dim); margin-top: 8px; }
+  .btn {
+    margin-top: 12px; padding: 9px 16px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--accent-2); background: transparent; color: var(--accent-2);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .btn:hover { background: rgba(88,166,255,.12); }
+
+  /* chat */
+  .chat { display: flex; flex-direction: column; gap: 14px; padding-bottom: 90px; }
+  .msg { display: flex; flex-direction: column; gap: 4px; }
+  .msg .who { font-size: 11px; color: var(--ink-dim); letter-spacing: .5px; }
+  .bubble {
+    border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+    background: var(--panel); white-space: pre-wrap; word-break: break-word;
+  }
+  .msg.me .bubble { background: var(--panel-2); border-color: #30404f; }
+  .msg.bot .who { color: var(--accent); }
+  .bubble code { background: #0b0f14; padding: 1px 5px; border-radius: 5px; color: var(--accent); }
+  .bubble pre {
+    background: #0b0f14; border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; overflow-x: auto; margin: 8px 0;
+  }
+  .bubble pre code { background: none; padding: 0; color: var(--ink); }
+  .sources { font-size: 11px; color: var(--ink-dim); margin-top: 6px; }
+  .sources span {
+    display: inline-block; border: 1px solid var(--border); border-radius: 999px;
+    padding: 1px 8px; margin: 2px 4px 0 0; color: var(--accent-2);
+  }
+  .empty { color: var(--ink-dim); text-align: center; margin-top: 40px; font-size: 13px; }
+
+  /* composer */
+  .composer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(13,17,23,.92); backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border); padding: 12px;
+  }
+  .composer .inner { max-width: 860px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+  .composer textarea {
+    flex: 1; resize: none; min-height: 44px; max-height: 160px;
+    padding: 11px 13px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--ink); font-family: var(--mono); font-size: 14px;
+  }
+  .composer textarea:focus { outline: none; border-color: var(--accent-2); }
+  .send {
+    padding: 0 18px; height: 44px; border-radius: 10px; cursor: pointer;
+    border: none; background: var(--accent); color: #0d1117; font-weight: 700;
+    font-family: var(--mono); font-size: 14px;
+  }
+  .send:disabled { opacity: .5; cursor: default; }
+  .typing .bubble::after { content: "▍"; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">tech<b>·notes</b></div>
+  <div class="status" id="status">未設定</div>
+  <div class="gear" id="gear">⚙ 設定</div>
+</header>
+
+<main>
+  <section class="settings" id="settings">
+    <h2>API キー</h2>
+    <label>Anthropic API Key</label>
+    <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" />
+    <div class="hint" style="margin-bottom:12px">このデバイスの localStorage にのみ保存。外部には送信されません。</div>
+
+    <h2>ノートの参照元（GitHub）</h2>
+    <div class="row">
+      <div>
+        <label>GitHub ユーザー名</label>
+        <input id="ghUser" placeholder="masahiko091664-star" />
+      </div>
+      <div>
+        <label>リポジトリ名</label>
+        <input id="ghRepo" placeholder="tech-notes-bot" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>ブランチ</label>
+        <input id="ghBranch" placeholder="main" />
+      </div>
+      <div>
+        <label>ノートのパス</label>
+        <input id="ghPath" placeholder="notes" />
+      </div>
+    </div>
+    <button class="btn" id="reload">保存してノートを読み込む</button>
+    <div class="hint">
+      <code>&lt;path&gt;/index.json</code> の <code>files</code> 配列に並んだ Markdown を raw から読み込みます。<br>
+      ノートを増やすときは GitHub 上で md を足し、index.json に名前を追記して push するだけ。
+    </div>
+  </section>
+
+  <div class="chat" id="chat">
+    <div class="empty" id="empty">設定からノートを読み込むと、その内容だけを根拠に回答します。</div>
+  </div>
+</main>
+
+<div class="composer">
+  <div class="inner">
+    <textarea id="input" placeholder="例: Claude Code で xhigh を使うのはどんな時？" rows="1"></textarea>
+    <button class="send" id="send" disabled>送信</button>
+  </div>
+</div>
+
+<script>
+const API = "https://api.anthropic.com/v1/messages";
+const LS = "techNotesCfg";
+
+let notes = [];      // [{name, text}]
+let loaded = false;
+let busy = false;
+
+const $ = (id) => document.getElementById(id);
+const statusEl = $("status");
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = "status" + (cls ? " " + cls : "");
+}
+
+// ---- 設定の保存/復元 ----
+function loadCfg() {
+  try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; }
+}
+function saveCfg(c) { localStorage.setItem(LS, JSON.stringify(c)); }
+
+function applyCfgToForm() {
+  const c = loadCfg();
+  $("apiKey").value = c.apiKey || "";
+  $("ghUser").value = c.user || "";
+  $("ghRepo").value = c.repo || "";
+  $("ghBranch").value = c.branch || "main";
+  $("ghPath").value = c.path || "notes";
+}
+
+// ---- ノート読み込み ----
+async function reloadNotes() {
+  const apiKey = $("apiKey").value.trim();
+  const user = $("ghUser").value.trim();
+  const repo = $("ghRepo").value.trim();
+  const branch = $("ghBranch").value.trim() || "main";
+  const path = $("ghPath").value.trim().replace(/^\/|\/$/g, "") || "notes";
+  if (!apiKey) { setStatus("APIキーを入力してください", "err"); return; }
+  if (!user || !repo) { setStatus("ユーザー名とリポジトリ名を入力してください", "err"); return; }
+
+  saveCfg({ apiKey, user, repo, branch, path });
+  setStatus("読み込み中…");
+
+  const base = `https://raw.githubusercontent.com/${user}/${repo}/${branch}/${path}`;
+  try {
+    const idx = await fetch(`${base}/index.json`).then((r) => {
+      if (!r.ok) throw new Error("index.json が見つかりません (" + r.status + ")");
+      return r.json();
+    });
+    const files = (idx.files || []).filter(Boolean);
+    if (!files.length) throw new Error("index.json の files が空です");
+
+    const results = await Promise.all(
+      files.map(async (f) => {
+        try {
+          const t = await fetch(`${base}/${f}`).then((r) => (r.ok ? r.text() : ""));
+          return { name: f, text: t };
+        } catch { return { name: f, text: "" }; }
+      })
+    );
+    notes = results.filter((n) => n.text);
+    loaded = notes.length > 0;
+    setStatus(`${notes.length} ノート読込済`, loaded ? "ok" : "err");
+    $("empty").textContent = loaded
+      ? "準備完了。ノートの内容について質問してください。"
+      : "ノートを読み込めませんでした。";
+    $("send").disabled = !loaded || busy;
+    $("settings").classList.remove("open");
+  } catch (e) {
+    setStatus("読込失敗: " + e.message, "err");
+  }
+}
+
+// ---- キーワード抽出（関連チャンクだけ集める） ----
+// md を見出し単位のチャンクに割り、質問語との一致数でスコアリング。
+function chunkize(note) {
+  const blocks = note.text.split(/\n(?=#{1,6}\s)/);
+  return blocks
+    .map((b) => b.trim())
+    .filter(Boolean)
+    .map((b) => ({ note: note.name, text: b }));
+}
+function tokenize(s) {
+  return (s.toLowerCase().match(/[a-z0-9_./-]+|[ぁ-んァ-ヶ一-龠]+/g) || []).filter((t) => t.length >= 2);
+}
+function selectContext(question, maxChars = 14000) {
+  const qTokens = new Set(tokenize(question));
+  const all = notes.flatMap(chunkize);
+  const scored = all.map((c) => {
+    const ct = tokenize(c.text);
+    let score = 0;
+    for (const t of ct) if (qTokens.has(t)) score++;
+    return { ...c, score };
+  });
+  // ヒットが全く無ければ全ノート冒頭を渡す（取りこぼし防止）
+  let picked = scored.filter((c) => c.score > 0).sort((a, b) => b.score - a.score);
+  if (!picked.length) picked = all.slice(0, 6).map((c) => ({ ...c, score: 0 }));
+
+  const out = [];
+  const used = new Set();
+  let total = 0;
+  for (const c of picked) {
+    const piece = `--- (${c.note}) ---\n${c.text}\n`;
+    if (total + piece.length > maxChars) break;
+    out.push(piece);
+    used.add(c.note);
+    total += piece.length;
+  }
+  return { context: out.join("\n"), sources: [...used] };
+}
+
+// ---- 描画 ----
+function escapeHtml(s) {
+  return s.replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m]));
+}
+// ごく軽量な md → html（コードブロック・インラインコードのみ）
+function renderMd(s) {
+  const parts = s.split(/```/);
+  return parts.map((p, i) => {
+    if (i % 2 === 1) {
+      const body = p.replace(/^[a-zA-Z]*\n/, "");
+      return "<pre><code>" + escapeHtml(body) + "</code></pre>";
+    }
+    return escapeHtml(p).replace(/`([^`]+)`/g, "<code>$1</code>");
+  }).join("");
+}
+function addMsg(who, cls, html, sources) {
+  $("empty")?.remove();
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + cls;
+  let s = "";
+  if (sources && sources.length) {
+    s = '<div class="sources">出典: ' + sources.map((x) => `<span>${escapeHtml(x)}</span>`).join("") + "</div>";
+  }
+  wrap.innerHTML = `<div class="who">${who}</div><div class="bubble">${html}</div>${s}`;
+  $("chat").appendChild(wrap);
+  window.scrollTo(0, document.body.scrollHeight);
+  return wrap;
+}
+
+// ---- 送信 ----
+async function send() {
+  if (busy || !loaded) return;
+  const q = $("input").value.trim();
+  if (!q) return;
+  const apiKey = loadCfg().apiKey;
+  if (!apiKey) { setStatus("APIキーが未設定です", "err"); $("settings").classList.add("open"); return; }
+
+  $("input").value = "";
+  $("input").style.height = "auto";
+  addMsg("あなた", "me", escapeHtml(q));
+
+  busy = true; $("send").disabled = true;
+  const { context, sources } = selectContext(q);
+  const typing = addMsg("tech·notes", "bot typing", "");
+
+  const system = [
+    "あなたは小池さん専用の技術リファレンス・ボットです。",
+    "以下の【ナレッジ】に書かれている内容だけを根拠に回答してください。",
+    "ナレッジに無い情報を推測・捏造してはいけません。",
+    "答えがナレッジ内に見つからない場合は「該当する記述が見つかりませんでした」と正直に伝えてください。",
+    "回答は簡潔に。コードや設定値は ```code``` ブロックで、出典ノートのファイル名を末尾に明記してください。",
+    "", "【ナレッジ】", context || "(該当ノートなし)",
+  ].join("\n");
+
+  try {
+    const r = await fetch(API, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-20250514",
+        max_tokens: 2000,
+        system,
+        messages: [{ role: "user", content: q }],
+      }),
+    });
+    const data = await r.json();
+    typing.remove();
+    if (!r.ok) {
+      addMsg("tech·notes", "bot", "⚠ " + escapeHtml(data?.error?.message || "APIエラー"));
+    } else {
+      const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+      addMsg("tech·notes", "bot", renderMd(text || ""), sources);
+    }
+  } catch (e) {
+    typing.remove();
+    addMsg("tech·notes", "bot", "⚠ 通信に失敗しました: " + escapeHtml(e.message));
+  } finally {
+    busy = false; $("send").disabled = !loaded;
+    $("input").focus();
+  }
+}
+
+// ---- イベント ----
+$("gear").onclick = () => $("settings").classList.toggle("open");
+$("reload").onclick = reloadNotes;
+$("send").onclick = send;
+$("input").addEventListener("input", (e) => {
+  e.target.style.height = "auto";
+  e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+});
+$("input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+});
+
+// ---- 起動 ----
+applyCfgToForm();
+const c = loadCfg();
+if (c.apiKey && c.user && c.repo) {
+  reloadNotes();
+} else {
+  $("settings").classList.add("open");
+}
+</script>
+</body>
+</html>
