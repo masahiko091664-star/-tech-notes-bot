@@ -1,0 +1,7 @@
+{
+  "comment": "ノートを増やすときはここにファイル名を追記してpushするだけ。",
+  "files": [
+    "claude-code.md",
+    "netlify.md"
+  ]
+}
